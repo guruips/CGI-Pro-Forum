@@ -1,0 +1,6 @@
+{
+  "name": "Catatan Guru IPS Pro",
+  "description": "Futuristic interactive education and collaboration platform for Social Science teachers, supporting CPNS prep, automatic map/graphics vector compression, and global community gamified badges.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
