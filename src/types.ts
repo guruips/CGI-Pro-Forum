@@ -42,7 +42,7 @@ export interface ForumPost {
   id: string;
   title: string;
   description: string;
-  category: 'TWK' | 'TIU' | 'TKP' | 'IPS SMP' | 'Geografi';
+  category: 'TWK' | 'TIU' | 'TKP' | 'IPS SMP' | 'Geografi' | 'CPNS' | 'Pedagogi' | 'Kurikulum Merdeka';
   type: 'modul' | 'soal' | 'prediksi' | 'bahas';
   authorName: string;
   authorRole: string;
@@ -53,6 +53,19 @@ export interface ForumPost {
   votes: number;
   timestamp: string;
   replies?: Reply[];
+  poll?: Poll;
+}
+
+export interface PollOption {
+  id: string;
+  text: string;
+  votes: number;
+}
+
+export interface Poll {
+  question: string;
+  options: PollOption[];
+  userVotes?: Record<string, string>; // username -> optionId
 }
 
 export interface SyncFeedItem {

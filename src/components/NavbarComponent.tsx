@@ -20,6 +20,7 @@ interface NavbarProps {
   currentUser: User;
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  onOpenProfile: (username: string) => void;
 }
 
 export const NavbarComponent: React.FC<NavbarProps> = ({
@@ -31,6 +32,7 @@ export const NavbarComponent: React.FC<NavbarProps> = ({
   currentUser,
   activeTab,
   setActiveTab,
+  onOpenProfile,
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -200,7 +202,11 @@ export const NavbarComponent: React.FC<NavbarProps> = ({
           </div>
 
           {/* User Profile Avatar */}
-          <div className="flex items-center gap-2">
+          <button
+            onClick={() => onOpenProfile(currentUser.name)}
+            className="flex items-center gap-2 hover:opacity-85 text-left focus:outline-none cursor-pointer"
+            title="Lihat Detail Profil Anda"
+          >
             <div className={`h-8 w-8 rounded-xl ${currentUser.avatarColor} text-white font-extrabold text-xs flex items-center justify-center shadow-inner`}>
               {currentUser.name.charAt(0)}
             </div>
@@ -208,7 +214,7 @@ export const NavbarComponent: React.FC<NavbarProps> = ({
               <p className="text-xs font-bold text-slate-700 leading-3">{currentUser.name}</p>
               <p className="text-[9px] font-semibold text-emerald-600 capitalize leading-3">Pendidik {currentUser.role}</p>
             </div>
-          </div>
+          </button>
 
         </div>
       </div>

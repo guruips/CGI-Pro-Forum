@@ -132,6 +132,18 @@ export const INITIAL_FORUM_POSTS: ForumPost[] = [
     votes: 9,
     status: 'open',
     timestamp: '1 jam yang lalu',
+    poll: {
+      question: 'Manakah Strategi Pedagogi Terbaik untuk materi Mitigasi Bencana & Geografi Lempeng?',
+      options: [
+        { id: 'opt-b-1', text: 'Simulasi Role-play Tanggap Bencana & Evakuasi Aktif', votes: 12 },
+        { id: 'opt-b-2', text: 'Studi Kasus Video & Pemetaan Interaktif Cincin Api', votes: 15 },
+        { id: 'opt-b-3', text: 'Pembuatan Presentasi Kelompok & Pembacaan Modul Teoretis', votes: 3 }
+      ],
+      userVotes: {
+        'Ahmad Faisal': 'opt-b-1',
+        'Dra. Endang Herawati': 'opt-b-2'
+      }
+    },
     replies: [
       {
         id: 'r3',
@@ -159,6 +171,17 @@ export const INITIAL_FORUM_POSTS: ForumPost[] = [
     votes: 3,
     status: 'open',
     timestamp: '3 jam yang lalu',
+    poll: {
+      question: 'Berapa Rating Tingkat Kesulitan Soal TWK Pancasila Media Sosial ini?',
+      options: [
+        { id: 'opt-twk-1', text: 'Sangat Mudah (Hafalan Lemah)', votes: 1 },
+        { id: 'opt-twk-2', text: 'Sedang (Analisis Kontekstual Standar BKN)', votes: 9 },
+        { id: 'opt-twk-3', text: 'Sangat Sulit (Analisis Tinggi HOTS Kontemporer)', votes: 14 }
+      ],
+      userVotes: {
+        'Dewi Lestari, S.Pd.': 'opt-twk-3'
+      }
+    },
     replies: []
   },
   {

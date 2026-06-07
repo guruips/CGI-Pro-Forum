@@ -19,6 +19,7 @@ import { LiveFeedSyncComponent } from './components/LiveFeedSyncComponent';
 import { ForumComponent } from './components/ForumComponent';
 import { ImageOptimizerComponent } from './components/ImageOptimizerComponent';
 import { AdminDashboardComponent } from './components/AdminDashboardComponent';
+import { ProfileModal } from './components/ProfileModal';
 
 // Types and mock lists
 import { ForumPost, Notification, User, SyncFeedItem } from './types';
@@ -60,10 +61,20 @@ export default function App() {
   // State to show eye-care help info bubble at start
   const [showWelcomeAlert, setShowWelcomeAlert] = useState<boolean>(true);
 
+  // Profile modal states
+  const [selectedProfileUsername, setSelectedProfileUsername] = useState<string | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
+
+  const handleOpenProfile = (username: string) => {
+    setSelectedProfileUsername(username);
+    setIsProfileModalOpen(true);
+  };
+
   // Push notifications controller
   const addPushNotification = (title: string, content: string, type: 'badge' | 'forum_reply' | 'request_solved' | 'level_up' | 'system') => {
+    const randomId = Math.random().toString(36).substring(2, 9);
     const newNotif: Notification = {
-      id: `notif-${Date.now()}`,
+      id: `notif-${Date.now()}-${randomId}`,
       title,
       content,
       type,
@@ -102,8 +113,9 @@ export default function App() {
 
     const randomCategory = ['Kombel', 'CPNS', 'Pedagogi'][Math.floor(Math.random() * 3)];
 
+    const randomId = Math.random().toString(36).substring(2, 9);
     const newFeedItem: SyncFeedItem = {
-      id: `feed-${Date.now()}`,
+      id: `feed-${Date.now()}-${randomId}`,
       source: 'Pusat Analisis Pendidikan RI',
       title: randomFeedTitle,
       url: 'https://catatanguruips.blogspot.com',
@@ -124,9 +136,10 @@ export default function App() {
 
   // Q&A actions (Creating collaboration requests)
   const handleAddPost = (newPostData: Omit<ForumPost, 'id' | 'authorName' | 'authorRole' | 'authorColor' | 'likes' | 'replies_count' | 'votes' | 'timestamp' | 'replies'>) => {
+    const randomId = Math.random().toString(36).substring(2, 9);
     const newPost: ForumPost = {
       ...newPostData,
-      id: `post-${Date.now()}`,
+      id: `post-${Date.now()}-${randomId}`,
       authorName: currentUser.name,
       authorRole: currentUser.role,
       authorColor: currentUser.avatarColor,
@@ -147,8 +160,9 @@ export default function App() {
   const handleAddReply = (postId: string, content: string) => {
     const updated = posts.map((post) => {
       if (post.id === postId) {
+        const randomId = Math.random().toString(36).substring(2, 9);
         const newReplyObj = {
-          id: `reply-${Date.now()}`,
+          id: `reply-${Date.now()}-${randomId}`,
           authorName: currentUser.name,
           authorRole: currentUser.role,
           authorColor: currentUser.avatarColor,
@@ -176,6 +190,75 @@ export default function App() {
       prev.map((post) => {
         if (post.id === postId) {
           return { ...post, likes: post.likes + 1 };
+        }
+        return post;
+      })
+    );
+  };
+
+  // Handling poll votes inside posts
+  const handleVotePoll = (postId: string, optionId: string) => {
+    setPosts((prev) => 
+      prev.map((post) => {
+        if (post.id === postId && post.poll) {
+          const userVotes = post.poll.userVotes || {};
+          const previousVoteOptionId = userVotes[currentUser.name];
+          
+          // Case 1: Unvote if user clicks the voted option again
+          if (previousVoteOptionId === optionId) {
+            const nextUserVotes = { ...userVotes };
+            delete nextUserVotes[currentUser.name];
+            
+            const nextOptions = post.poll.options.map((opt) => {
+              if (opt.id === optionId) {
+                return { ...opt, votes: Math.max(0, opt.votes - 1) };
+              }
+              return opt;
+            });
+            
+            return {
+              ...post,
+              poll: {
+                ...post.poll,
+                options: nextOptions,
+                userVotes: nextUserVotes
+              }
+            };
+          }
+          
+          // Case 2: Cast new vote or switch vote
+          const nextUserVotes = { ...userVotes, [currentUser.name]: optionId };
+          const nextOptions = post.poll.options.map((opt) => {
+            let nextVotes = opt.votes;
+            if (opt.id === optionId) {
+              nextVotes += 1;
+            }
+            if (previousVoteOptionId && opt.id === previousVoteOptionId) {
+              nextVotes = Math.max(0, nextVotes - 1);
+            }
+            return { ...opt, votes: nextVotes };
+          });
+          
+          // Give points for participating (+5 XP)
+          if (!previousVoteOptionId) {
+            setTimeout(() => {
+              updateUserPoints(5, 'Berpartisipasi Polling');
+              addPushNotification(
+                'Suara Anda Diterima! 🗳️',
+                'Terima kasih telah berpartisipasi dalam jajak pendapat musyawarah guru. +5 Poin diperoleh.',
+                'system'
+              );
+            }, 100);
+          }
+          
+          return {
+            ...post,
+            poll: {
+              ...post.poll,
+              options: nextOptions,
+              userVotes: nextUserVotes
+            }
+          };
         }
         return post;
       })
@@ -300,6 +383,7 @@ export default function App() {
         currentUser={currentUser}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        onOpenProfile={handleOpenProfile}
       />
 
       {/* 2. Top Banner Alert explaining the Eye Care Tint Mode */}
@@ -365,6 +449,8 @@ export default function App() {
                   onMarkBestAnswer={handleMarkBestAnswer}
                   leaderboard={leaderboardList}
                   onUpvotePost={handleUpvotePost}
+                  onOpenProfile={handleOpenProfile}
+                  onVotePoll={handleVotePoll}
                 />
               </div>
 
@@ -485,6 +571,19 @@ export default function App() {
           );
         })}
       </nav>
+
+      {/* Profile Detail Summary Modal */}
+      {isProfileModalOpen && selectedProfileUsername && (
+        <ProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          username={selectedProfileUsername}
+          isCurrentUser={selectedProfileUsername === currentUser.name}
+          currentUser={currentUser}
+          posts={posts}
+          isEyeCare={isEyeCare}
+        />
+      )}
 
     </div>
   );

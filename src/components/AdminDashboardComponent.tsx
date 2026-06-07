@@ -55,6 +55,9 @@ export const AdminDashboardComponent: React.FC<AdminDashboardProps> = ({ isEyeCa
     'TWK': posts.filter((p) => p.category === 'TWK').length,
     'TIU': posts.filter((p) => p.category === 'TIU').length,
     'TKP': posts.filter((p) => p.category === 'TKP').length,
+    'CPNS': posts.filter((p) => p.category === 'CPNS').length,
+    'Pedagogi': posts.filter((p) => p.category === 'Pedagogi').length,
+    'Kurikulum Merdeka': posts.filter((p) => p.category === 'Kurikulum Merdeka').length,
   };
 
   const maxVal = Math.max(...Object.values(categoryStats), 1);
