@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   MessageSquare, 
   Filter, 
@@ -12,7 +12,9 @@ import {
   ThumbsUp,
   Globe,
   Flame,
-  Milestone
+  Milestone,
+  Share2,
+  Check
 } from 'lucide-react';
 import { ForumPost, User, Badge } from '../types';
 import { EXCLUSIVE_ROOM_MESSAGES, AVAILABLE_BADGES } from '../data';
@@ -42,18 +44,176 @@ export const ForumComponent: React.FC<ForumProps> = ({
   const [selectedType, setSelectedType] = useState<string>('All');
   const [activeSubTab, setActiveSubTab] = useState<'public' | 'exclusive'>('public');
 
-  // Form states for creating a new request
-  const [showForm, setShowForm] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newDesc, setNewDesc] = useState('');
-  const [newCategory, setNewCategory] = useState<'TWK' | 'TIU' | 'TKP' | 'IPS SMP' | 'Geografi'>('IPS SMP');
-  const [newType, setNewType] = useState<'modul' | 'soal' | 'prediksi' | 'bahas'>('modul');
+  // Form states for creating a new request with localStorage backup
+  const [showForm, setShowForm] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('forum_show_form');
+      return saved ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+  const [newTitle, setNewTitle] = useState<string>(() => {
+    try {
+      return localStorage.getItem('forum_new_title') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [newDesc, setNewDesc] = useState<string>(() => {
+    try {
+      return localStorage.getItem('forum_new_desc') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [newCategory, setNewCategory] = useState<'TWK' | 'TIU' | 'TKP' | 'IPS SMP' | 'Geografi'>(() => {
+    try {
+      const saved = localStorage.getItem('forum_new_category');
+      return (saved as any) || 'IPS SMP';
+    } catch {
+      return 'IPS SMP';
+    }
+  });
+  const [newType, setNewType] = useState<'modul' | 'soal' | 'prediksi' | 'bahas'>(() => {
+    try {
+      const saved = localStorage.getItem('forum_new_type');
+      return (saved as any) || 'modul';
+    } catch {
+      return 'modul';
+    }
+  });
 
-  // Interactive replies input state mapping (postId -> input text)
-  const [repliesInputs, setRepliesInputs] = useState<{ [postId: string]: string }>({});
+  // Interactive replies input state mapping (postId -> input text) with localStorage backup
+  const [repliesInputs, setRepliesInputs] = useState<{ [postId: string]: string }>(() => {
+    try {
+      const saved = localStorage.getItem('forum_replies_inputs');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Automatically synchronize state changes to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('forum_show_form', JSON.stringify(showForm));
+    } catch (e) {
+      console.warn('Gagal menyimpan status form ke localStorage', e);
+    }
+  }, [showForm]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('forum_new_title', newTitle);
+    } catch (e) {
+      console.warn('Gagal menyimpan judul ke localStorage', e);
+    }
+  }, [newTitle]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('forum_new_desc', newDesc);
+    } catch (e) {
+      console.warn('Gagal menyimpan deskripsi ke localStorage', e);
+    }
+  }, [newDesc]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('forum_new_category', newCategory);
+    } catch (e) {
+      console.warn('Gagal menyimpan kategori ke localStorage', e);
+    }
+  }, [newCategory]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('forum_new_type', newType);
+    } catch (e) {
+      console.warn('Gagal menyimpan tipe ke localStorage', e);
+    }
+  }, [newType]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('forum_replies_inputs', JSON.stringify(repliesInputs));
+    } catch (e) {
+      console.warn('Gagal menyimpan input balasan ke localStorage', e);
+    }
+  }, [repliesInputs]);
   
   // Selected single post to discuss / expand details
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
+
+  const [copiedPostId, setCopiedPostId] = useState<string | null>(null);
+
+  // Parse deep-linked post parameter from URL and auto-scroll
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const postParam = params.get('post');
+      if (postParam && posts.some(p => p.id === postParam)) {
+        setExpandedPostId(postParam);
+        setTimeout(() => {
+          const element = document.getElementById(postParam);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 500);
+      }
+    } catch (e) {
+      console.warn('Gagal membaca parameter deep-link untuk rikuest:', e);
+    }
+  }, [posts]);
+
+  const handleSharePost = (postId: string) => {
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrl = `${baseUrl}?post=${postId}`;
+    
+    // Attempt modern copy API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        setCopiedPostId(postId);
+        setTimeout(() => {
+          setCopiedPostId(null);
+        }, 2000);
+      }).catch((err) => {
+        console.warn('Gagal menggunakan modern clipboard, mencoba fallback...', err);
+        fallbackCopyText(shareUrl, postId);
+      });
+    } else {
+      fallbackCopyText(shareUrl, postId);
+    }
+  };
+
+  const fallbackCopyText = (text: string, postId: string) => {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      // Avoid scrolling to bottom
+      textArea.style.top = "0";
+      textArea.style.left = "0";
+      textArea.style.position = "fixed";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      if (successful) {
+        setCopiedPostId(postId);
+        setTimeout(() => {
+          setCopiedPostId(null);
+        }, 2000);
+      } else {
+        alert(`Tautan bagikan: ${text}`);
+      }
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+      const decodedText = decodeURIComponent(text);
+      prompt("Salin tautan di bawah ini secara manual:", decodedText);
+    }
+  };
 
   // Exclusive Chat room state
   const [loungeMessages, setLoungeMessages] = useState(EXCLUSIVE_ROOM_MESSAGES);
@@ -68,7 +228,11 @@ export const ForumComponent: React.FC<ForumProps> = ({
     const txt = repliesInputs[postId];
     if (!txt || !txt.trim()) return;
     onAddReply(postId, txt);
-    setRepliesInputs((prev) => ({ ...prev, [postId]: '' }));
+    setRepliesInputs((prev) => {
+      const copy = { ...prev };
+      delete copy[postId];
+      return copy;
+    });
   };
 
   const handleCreatePost = (e: React.FormEvent) => {
@@ -84,6 +248,13 @@ export const ForumComponent: React.FC<ForumProps> = ({
     setNewTitle('');
     setNewDesc('');
     setShowForm(false);
+
+    try {
+      localStorage.removeItem('forum_new_title');
+      localStorage.removeItem('forum_new_desc');
+    } catch (err) {
+      console.warn('Gagal menghapus draf post dari localStorage', err);
+    }
   };
 
   const handlePostLoungeMsg = (e: React.FormEvent) => {
@@ -233,18 +404,26 @@ export const ForumComponent: React.FC<ForumProps> = ({
                   isEyeCare ? 'bg-[#fbf6eb] border-[#eae0cf]' : 'bg-white border-slate-100'
                 }`}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-4">
                   <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
                     <Sparkles className="h-4.5 w-4.5 text-amber-500" />
                     Ajukan Rikuest Pembahasan / Modul Baru
                   </h3>
-                  <button
-                    type="button"
-                    onClick={() => setShowForm(false)}
-                    className="text-xs text-slate-400 hover:text-slate-600"
-                  >
-                    Batal
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {(newTitle || newDesc) && (
+                      <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 animate-pulse">
+                        <Check className="h-3 w-3 text-emerald-600" />
+                        Draf Tersimpan
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowForm(false)}
+                      className="text-xs text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      Batal
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
@@ -312,10 +491,13 @@ export const ForumComponent: React.FC<ForumProps> = ({
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-3">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100/60 w-full">
+                  <p className="text-[10px] text-slate-400 font-medium">
+                    * Ketikan Anda disimpan otomatis secara lokal ke browser
+                  </p>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all duration-300 shadow-sm cursor-pointer"
+                    className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all duration-300 shadow-sm cursor-pointer"
                   >
                     Terbitkan Ke Forum
                   </button>
@@ -337,6 +519,7 @@ export const ForumComponent: React.FC<ForumProps> = ({
                   return (
                     <div 
                       key={post.id}
+                      id={post.id}
                       className={`p-5 rounded-2xl border transition-all duration-300 text-left ${
                         isEyeCare 
                           ? 'bg-[#f6efe0] border-[#eae0cf] hover:border-[#eae0cf]/80' 
@@ -390,7 +573,7 @@ export const ForumComponent: React.FC<ForumProps> = ({
                         <div className="flex items-center gap-4">
                           <button 
                             onClick={() => onUpvotePost(post.id)}
-                            className="flex items-center gap-1 text-slate-500 hover:text-emerald-600 font-bold transition-colors"
+                            className="flex items-center gap-1 text-slate-500 hover:text-emerald-600 font-bold transition-colors cursor-pointer"
                           >
                             <ThumbsUp className="h-3.5 w-3.5 text-slate-400" />
                             {post.likes}
@@ -398,10 +581,32 @@ export const ForumComponent: React.FC<ForumProps> = ({
                           
                           <button
                             onClick={() => setExpandedPostId(isExpanded ? null : post.id)}
-                            className="flex items-center gap-1 font-bold text-emerald-600 hover:underline"
+                            className="flex items-center gap-1 font-bold text-emerald-600 hover:underline cursor-pointer"
                           >
                             <MessageSquare className="h-3.5 w-3.5" />
                             {post.replies?.length || 0} Tanggapan
+                          </button>
+
+                          <button
+                            onClick={() => handleSharePost(post.id)}
+                            className={`flex items-center gap-1 font-bold transition-colors duration-300 cursor-pointer ${
+                              copiedPostId === post.id 
+                                ? 'text-emerald-600' 
+                                : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                            title="Salin tautan bagikan untuk rikuest ini"
+                          >
+                            {copiedPostId === post.id ? (
+                              <>
+                                <Check className="h-3.5 w-3.5 text-emerald-600 animate-bounce" />
+                                <span>Disalin!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Share2 className="h-3.5 w-3.5 text-slate-400" />
+                                <span>Bagikan</span>
+                              </>
+                            )}
                           </button>
                         </div>
                       </div>
@@ -476,15 +681,23 @@ export const ForumComponent: React.FC<ForumProps> = ({
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') submitReply(post.id);
                                 }}
-                                placeholder="Tuliskan saran, jawaban, atau sertakan link dokumen modul di sini..."
-                                className="w-full pl-3.5 pr-10 py-2.5 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-emerald-500 bg-slate-50"
+                                placeholder="Tuliskan saran, jawaban, atau draf modul di sini (disimpan otomatis)..."
+                                className="w-full pl-3.5 pr-16 py-2.5 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-emerald-500 bg-slate-50"
                               />
-                              <button
-                                onClick={() => submitReply(post.id)}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-600"
-                              >
-                                <Send className="h-4 w-4" />
-                              </button>
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                                {repliesInputs[post.id] && (
+                                  <span className="text-[9px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded font-bold animate-pulse" title="Draf jawaban tersimpan otomatis">
+                                    ✓ Saved
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => submitReply(post.id)}
+                                  className="text-slate-400 hover:text-emerald-600 cursor-pointer"
+                                  title="Kirim pembahasan"
+                                >
+                                  <Send className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
                             </div>
                           </div>
 
